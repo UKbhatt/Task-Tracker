@@ -26,4 +26,8 @@ class SupabaseServices {
       'is_completed': !task.isCompleted,
     }).eq('id', task.id);
   }
+
+  Future<void> deleteTask(int taskId) async {
+    await _client.from('tasks').delete().eq('id', taskId);
+  }
 }

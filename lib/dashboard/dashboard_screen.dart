@@ -109,7 +109,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
   }
-
   Future<void> ShowDialogWithValues(
       TextEditingController titleController, DateTime selectedDate) async {
     await showDialog(
@@ -220,28 +219,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildTaskTile(Task task) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        title: Text(
-          task.title,
-          style: GoogleFonts.poppins(
-            fontSize: 17,
-            decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+ Widget _buildTaskTile(Task task) {
+    return Dismissible(
+      key: Key(task.id.toString()), 
+      direction: DismissDirection.startToEnd,
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Delete Task',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            content: Text('Are you sure you want to delete this task?',
+                style: GoogleFonts.poppins()),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel')),
+              ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Delete')),
+            ],
           ),
-        ),
-        subtitle: Text(
-          'Due: ${task.dueDate.toLocal().toString().split(' ')[0]}',
-          style: GoogleFonts.poppins(fontSize: 14),
-        ),
-        trailing: Checkbox(
-          value: task.isCompleted,
-          onChanged: (_) => toggleTask(task),
+        );
+      },
+      onDismissed: (_) async {
+        await _supabaseServices.deleteTask(task.id as int);
+        fetchTask();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('${task.title} deleted', style: GoogleFonts.poppins())),
+        );
+      },
+      child: Card(
+        elevation: 2,
+        margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: ListTile(
+          title: Text(
+            task.title,
+            style: GoogleFonts.poppins(
+              fontSize: 17,
+              decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+            ),
+          ),
+          subtitle: Text(
+            'Due: ${task.dueDate.toLocal().toString().split(' ')[0]}',
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
+          trailing: Checkbox(
+            value: task.isCompleted,
+            onChanged: (_) => toggleTask(task),
+          ),
         ),
       ),
     );
   }
+
 }
