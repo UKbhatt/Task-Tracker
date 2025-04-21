@@ -1,30 +1,73 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:task_tracker/auth/auth_services.dart';
 import 'login_screen.dart';
 
-class SignupScreen extends StatelessWidget {
-  SignupScreen({super.key});
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
 
+  @override
+  State<SignupScreen> createState() => signUpScreenState();
+}
+
+class signUpScreenState extends State<SignupScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  bool isLoading = false;
 
-  void _signup(BuildContext context) async {
-    final authService = AuthServices();
-    final response = await authService.signUp(
-      emailController.text,
-      passwordController.text,
-    );
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
-    if (response.user != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => LoginScreen()),
+  void signUp(BuildContext context) async {
+    setState(() => isLoading = true);
+    final authServices = AuthServices();
+
+    try {
+      final response = await authServices.signUp(
+        emailController.text.trim(),
+        passwordController.text.trim(),
       );
-    } else {
+
+      if (response.user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Signup successful! Please check your email to confirm.')),
+        );
+        Navigator.pop(context);
+      }
+    } on AuthException catch (e) {
+      if (e.message.contains('User already registered') ||
+          e.message.contains('Email already registered') ||
+          e.message.contains('A user with this email address already exists')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email already registered. Please login instead.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Signup failed: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Signup failed. Please try again.')),
+        const SnackBar(
+          content: Text('Unexpected error occurred'),
+          backgroundColor: Colors.red,
+        ),
       );
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 
@@ -78,17 +121,19 @@ class SignupScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => _signup(context),
+                  onPressed: isLoading ? null : () => signUp(context),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(
-                    'Sign Up',
-                    style: GoogleFonts.poppins(fontSize: 16),
-                  ),
+                  child: isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          'Sign Up',
+                          style: GoogleFonts.poppins(fontSize: 16),
+                        ),
                 ),
               ),
               const SizedBox(height: 16),

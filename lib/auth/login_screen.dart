@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:task_tracker/auth/signup_screen.dart';
 import 'package:task_tracker/dashboard/dashboard_screen.dart';
 import '../auth/auth_services.dart';
@@ -14,25 +15,54 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
   bool isLoading = false;
 
-  void login() async {
+void login() async {
     setState(() => isLoading = true);
     final authServices = AuthServices();
-    final response = await authServices.signIn(
-      emailController.text,
-      passwordController.text,
-    );
 
-    setState(() => isLoading = false);
-
-    if (response.user != null) {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => const DashboardScreen()));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login failed. Check your credentials.')),
+    try {
+      final response = await authServices.signIn(
+        emailController.text.trim(),
+        passwordController.text.trim(),
       );
+
+      if (response.user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login successful!')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      }
+    } on AuthException catch (e) {
+      if (e.message.contains('Invalid login credentials') ||
+          e.message.contains('Invalid email or password')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: const Text('No account found. Please sign up first.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unexpected error occurred'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => isLoading = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
