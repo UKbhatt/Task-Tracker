@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:task_tracker/auth/login_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:task_tracker/splash_screen.dart';
 
 void main() async {
-  await dotenv.load(fileName: '.env') ; 
-  runApp(const MyApp());
+  await dotenv.load(fileName: '.env');
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+      url: dotenv.env['SUPABASE_URL'] ?? '',
+      anonKey: dotenv.env['ANON_KEY'] ?? '');
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  MyApp({super.key});
+  final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      home: const LoginScreen(),
+      debugShowCheckedModeBanner: false,
+      home: SplashScreen(),
     );
   }
 }

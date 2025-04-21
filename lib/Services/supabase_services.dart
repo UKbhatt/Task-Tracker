@@ -1,31 +1,29 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:task_tracker/dashboard/task_model.dart';
 
 class SupabaseServices {
-  static final client = Supabase.instance.client;
+  final _client = Supabase.instance.client;
 
-  static void init() async {
-    await Supabase.initialize(
-        url: dotenv.env['SUPABASE_URL'] ?? 'default_supabase_url',
-        anonKey: dotenv.env['ANON_KEY'] ?? 'default_ANON_url');
+  Future<List<Task>> fetchTasks() async {
+    final res = await _client
+        .from('tasks')
+        .select()
+        .eq('user_id', _client.auth.currentUser!.id)
+        .order('created_at', ascending: false);
+    return (res as List).map((e) => Task.fromMap(e)).toList();
   }
 
-  static bool get isLoggedIn => client.auth.currentUser != null;
-
-  // adding Task
-  static Future<List<Task>> getTask() async {
-    final response = await client.from('Task').select();
-    return (response as List).map((e) => Task.fromMap(e)).toList();
+  Future<void> addTask(String title, DateTime dueDate) async {
+    await _client.from('tasks').insert({
+      'title': title,
+      'user_id': _client.auth.currentUser!.id,
+      'due_date': dueDate.toIso8601String().substring(0, 10),
+    });
   }
 
-  // update Task
-  static Future<void> UpdateTask(bool isCompleted , String id) async {
-    await client.from('Task').update({'isCompleted' : isCompleted}).eq('id', id); 
-  }
-
-  //Delete Task
-  static Future<void> DeleteTask(String id) async {
-    await client.from('Task').delete().eq('id', id); 
+  Future<void> toggleTask(Task task) async {
+    await _client.from('tasks').update({
+      'is_completed': !task.isCompleted,
+    }).eq('id', task.id);
   }
 }
