@@ -14,7 +14,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _supabaseServices = SupabaseServices();
-  final _authServices = AuthServices();
+  final authServices = AuthServices();
   int totalTasks = 0;
   int completedTasks = 0;
   int pendingTasks = 0;
@@ -28,7 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         totalTasks = tasks.length;
         completedTasks = tasks.where((t) => t.isCompleted).length;
         pendingTasks = tasks.where((t) => !t.isCompleted).length;
-        userEmail = _authServices.getCurrentUser()?.email ?? 'Unknown';
+        userEmail = authServices.getCurrentUser()?.email ?? 'Unknown';
         isLoading = false;
       });
     } catch (e) {
@@ -50,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> logout() async {
-    await _authServices.signOut();
+    await authServices.signOut();
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => LoginScreen()),
