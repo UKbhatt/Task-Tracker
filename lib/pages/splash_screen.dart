@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:task_tracker/auth/login_screen.dart';
 import 'package:task_tracker/dashboard/dashboard_screen.dart';
+import '../theme/splash_color.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -40,24 +41,32 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: kSplashBackgroundColor,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.track_changes, size: 80, color: Colors.blueAccent),
-            const SizedBox(height: 20),
-            Text(
-              'Task Tracker',
-              style: GoogleFonts.poppins(
-                fontSize: 28,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
+        child: AnimatedOpacity(
+          opacity: 1.0,
+          duration: const Duration(seconds: 1),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                height: 120,
+                width: 120,
+                  child:
+                      Image.asset('assets/image.png')), 
+              const SizedBox(height: 20),
+              Text(
+                'Task Tracker',
+                style: GoogleFonts.poppins(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w600,
+                  color: kPrimaryColor, 
+                ),
               ),
-            ),
-            const SizedBox(height: 30),
-            const CircularProgressIndicator(),
-          ],
+              const SizedBox(height: 30),
+              const CircularProgressIndicator(),
+            ],
+          ),
         ),
       ),
     );

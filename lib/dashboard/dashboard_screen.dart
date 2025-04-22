@@ -1,19 +1,26 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:task_tracker/Services/supabase_services.dart';
 import 'package:task_tracker/auth/auth_services.dart';
 import 'package:task_tracker/auth/login_screen.dart';
 import 'package:task_tracker/dashboard/task_model.dart';
+import 'package:task_tracker/pages/profile_page.dart';
+import 'package:task_tracker/theme/colors.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final _supabaseServices = SupabaseServices();
+  final _authServices = AuthServices();
   List<Task> _tasks = [];
+  int _currentIndex = 0;
 
   Future<void> fetchTask() async {
     final tasks = await _supabaseServices.fetchTasks();
@@ -31,22 +38,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     fetchTask();
   }
 
+  Future<void> logout() async {
+    await showDialog<bool>(
+      context: context,
+      builder: (context) => _glassDialog(
+        title: 'Logout',
+        content: 'Are you sure you want to logout?',
+        confirmText: 'Logout',
+        cancelText: 'Cancel',
+        onConfirm: () async {
+          await _authServices.signOut();
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => LoginScreen()),
+            (route) => false,
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> ShowDialog() async {
     final titleController = TextEditingController();
     DateTime? selectedDate;
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Add New Task',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Column(
+      builder: (context) => _glassDialog(
+        title: 'Add New Task',
+        contentWidget: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: titleController,
+              style: TextStyle(color: kPrimaryTextColor),
               decoration: const InputDecoration(labelText: 'Task Title'),
             ),
             const SizedBox(height: 12),
@@ -57,101 +82,155 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   initialDate: DateTime.now(),
                   firstDate: DateTime.now(),
                   lastDate: DateTime(2100),
+                  builder: (context, child) {
+                    return Theme(
+                      data: ThemeData.dark(),
+                      child: child!,
+                    );
+                  },
                 );
                 if (picked != null) {
-                  setState(() => selectedDate = picked);
                   Navigator.of(context).pop();
-              ShowDialogWithValues(titleController, picked);
+                  ShowDialogWithValues(titleController, picked);
                 }
               },
               icon: const Icon(Icons.calendar_today),
               label: const Text('Pick Due Date'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kActiveCheckboxColor,
+                foregroundColor: Colors.black,
+              ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
+        confirmText: null,
+        cancelText: 'Close',
       ),
     );
   }
 
-  Future<void> logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Logout',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        content: Text('Are you sure you want to logout?',
-            style: GoogleFonts.poppins()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      var authServices = AuthServices();
-      await authServices.signOut();
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => LoginScreen()),
-        (route) => false,
-      );
-    }
-  }
   Future<void> ShowDialogWithValues(
-      TextEditingController titleController, DateTime selectedDate) async {
+      TextEditingController controller, DateTime date) async {
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Confirm Task',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Column(
+      builder: (context) => _glassDialog(
+        title: 'Confirm Task',
+        contentWidget: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              controller: titleController,
+              controller: controller,
+              style: TextStyle(color: kPrimaryTextColor),
               decoration: const InputDecoration(labelText: 'Task Title'),
             ),
             const SizedBox(height: 12),
-            Text(
-              'Due Date: ${selectedDate.toLocal().toString().split(' ')[0]}',
-              style: GoogleFonts.poppins(fontSize: 16),
-            ),
+            Text('Due Date: ${date.toLocal().toString().split(' ')[0]}',
+                style: GoogleFonts.poppins(
+                    fontSize: 16, color: kPrimaryTextColor)),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+        confirmText: 'Add Task',
+        cancelText: 'Cancel',
+        onConfirm: () async {
+          if (controller.text.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Please enter a title',
+                    style: TextStyle(color: Colors.white))));
+            return;
+          }
+          await _supabaseServices.addTask(controller.text, date);
+          Navigator.of(context).pop();
+          fetchTask();
+        },
+      ),
+    );
+  }
+
+  Widget _glassDialog({
+    required String title,
+    String? content,
+    Widget? contentWidget,
+    String? confirmText,
+    String? cancelText,
+    VoidCallback? onConfirm,
+  }) {
+    return Dialog(
+      backgroundColor: Colors.white.withOpacity(0.05),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title,
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 20,
+                      color: kPrimaryTextColor)),
+              const SizedBox(height: 10),
+              contentWidget ??
+                  Text(content ?? '',
+                      style: GoogleFonts.poppins(
+                          fontSize: 16, color: kPrimaryTextColor),
+                      textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (cancelText != null)
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text(cancelText,
+                          style: TextStyle(color: Colors.white)),
+                    ),
+                  if (confirmText != null)
+                    ElevatedButton(
+                      onPressed: () {
+                        onConfirm?.call();
+                      },
+                      child: Text(confirmText),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kActiveCheckboxColor,
+                        foregroundColor: Colors.black,
+                      ),
+                    ),
+                ],
+              )
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              if (titleController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a title')));
-                return;
-              }
-              await _supabaseServices.addTask(
-                  titleController.text, selectedDate);
-              Navigator.of(context).pop();
-              fetchTask();
-            },
-            child: const Text('Add Task'),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskTile(Task task) {
+    return Card(
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: kCardColor,
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        title: Text(
+          task.title,
+          style: GoogleFonts.poppins(
+            fontSize: 17,
+            color: kPrimaryTextColor,
+            decoration: task.isCompleted ? TextDecoration.lineThrough : null,
           ),
-        ],
+        ),
+        subtitle: Text(
+          'Due: ${task.dueDate.toLocal().toString().split(' ')[0]}',
+          style: GoogleFonts.poppins(fontSize: 14, color: kSecondaryTextColor),
+        ),
+        trailing: Checkbox(
+          value: task.isCompleted,
+          onChanged: (_) => toggleTask(task),
+          activeColor: kActiveCheckboxColor,
+          checkColor: Colors.black,
+        ),
       ),
     );
   }
@@ -162,124 +241,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final completedTasks = _tasks.where((t) => t.isCompleted).toList();
 
     return Scaffold(
+      extendBody: true,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [kBackgroundGradientStart, kBackgroundGradientEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: _tasks.isEmpty
+            ? Center(
+                child: Text('No tasks yet — add one!',
+                    style: GoogleFonts.poppins(
+                        fontSize: 16, color: kSecondaryTextColor)))
+            : ListView(
+                padding: const EdgeInsets.all(12),
+                children: [
+                  if (pendingTasks.isNotEmpty)
+                    Text('Pending Tasks',
+                        style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            color: kPendingTitleColor,
+                            fontWeight: FontWeight.bold)),
+                  ...pendingTasks.map(_buildTaskTile),
+                  if (completedTasks.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 20),
+                      child: Text('Completed Tasks',
+                          style: GoogleFonts.poppins(
+                              fontSize: 20, color: kCompletedTitleColor)),
+                    ),
+                  ...completedTasks.map(_buildTaskTile),
+                ],
+              ),
+      ),
       appBar: AppBar(
         title: Text('Task Dashboard',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            style: GoogleFonts.poppins(color: kPrimaryTextColor)),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: logout,
-          )
-        ],
-      ),
-      body: _tasks.isEmpty
-          ? Center(
-              child: Text(
-                'No tasks yet — add one!',
-                style: GoogleFonts.poppins(fontSize: 16),
-              ),
-            )
-          : ListView(
-              padding: const EdgeInsets.all(8),
-              children: [
-                if (pendingTasks.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(
-                      'Pending Tasks',
-                      style: GoogleFonts.poppins(
-                          fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ...pendingTasks.map((task) => _buildTaskTile(task)),
-                if (completedTasks.isNotEmpty)
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-                    child: Text(
-                      'Completed Tasks',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green[700],
-                      ),
-                    ),
-                  ),
-                ...completedTasks.map((task) => _buildTaskTile(task)),
-              ],
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: ShowDialog
-    ,
-        label: const Text('Add Task'),
-        icon: const Icon(Icons.add),
-      ),
-    );
-  }
+        backgroundColor: Colors.yellow.withOpacity(0.2),
 
- Widget _buildTaskTile(Task task) {
-    return Dismissible(
-      key: Key(task.id.toString()), 
-      direction: DismissDirection.startToEnd,
-      background: Container(
-        color: Colors.red,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: const Icon(Icons.delete, color: Colors.white),
+        elevation: 0,
       ),
-      confirmDismiss: (direction) async {
-        return await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Delete Task',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-            content: Text('Are you sure you want to delete this task?',
-                style: GoogleFonts.poppins()),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel')),
-              ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Delete')),
+      bottomNavigationBar: ClipRRect(
+        borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            backgroundColor: Colors.white.withOpacity(0.1),
+            selectedItemColor: kPrimaryTextColor,
+            unselectedItemColor: kSecondaryTextColor,
+            onTap: (index) {
+              if (index == 1) {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()));
+              } else if (index == 2) {
+                ShowDialog();
+              } else if (index == 3) {
+                logout();
+              }
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            items: const [
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.list), label: 'Dashboard'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.person), label: 'Profile'),
+              BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add Task'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.logout), label: 'Logout'),
             ],
-          ),
-        );
-      },
-      onDismissed: (_) async {
-        await _supabaseServices.deleteTask(task.id as int);
-        fetchTask();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('${task.title} deleted', style: GoogleFonts.poppins())),
-        );
-      },
-      child: Card(
-        elevation: 2,
-        margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: ListTile(
-          title: Text(
-            task.title,
-            style: GoogleFonts.poppins(
-              fontSize: 17,
-              decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-            ),
-          ),
-          subtitle: Text(
-            'Due: ${task.dueDate.toLocal().toString().split(' ')[0]}',
-            style: GoogleFonts.poppins(fontSize: 14),
-          ),
-          trailing: Checkbox(
-            value: task.isCompleted,
-            onChanged: (_) => toggleTask(task),
+            type: BottomNavigationBarType.fixed,
           ),
         ),
       ),
     );
   }
-
 }
