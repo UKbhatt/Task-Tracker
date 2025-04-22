@@ -43,7 +43,6 @@ dependencies:
   cached_network_image: ^3.4.1
   flutter_dotenv: ^5.2.1
   glassmorphism: ^3.0.0
-  blur: ^4.0.2
 
 dev_dependencies:
   flutter_test:

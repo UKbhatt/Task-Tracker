@@ -8,7 +8,6 @@ import 'package:task_tracker/dashboard/task_model.dart';
 import 'package:task_tracker/pages/profile_page.dart';
 import 'package:task_tracker/theme/colors.dart';
 
-
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -72,7 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             TextField(
               controller: titleController,
               style: TextStyle(color: kPrimaryTextColor),
-              decoration: const InputDecoration(labelText: 'Task Title'),
+              decoration: const InputDecoration(labelText: 'Task Title', labelStyle: TextStyle(color: Colors.white70)),
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
@@ -83,10 +82,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   firstDate: DateTime.now(),
                   lastDate: DateTime(2100),
                   builder: (context, child) {
-                    return Theme(
-                      data: ThemeData.dark(),
-                      child: child!,
-                    );
+                    return Theme(data: ThemeData.dark(), child: child!);
                   },
                 );
                 if (picked != null) {
@@ -124,18 +120,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               decoration: const InputDecoration(labelText: 'Task Title'),
             ),
             const SizedBox(height: 12),
-            Text('Due Date: ${date.toLocal().toString().split(' ')[0]}',
-                style: GoogleFonts.poppins(
-                    fontSize: 16, color: kPrimaryTextColor)),
+            Text(
+              'Due Date: ${date.toLocal().toString().split(' ')[0]}',
+              style:
+                  GoogleFonts.poppins(fontSize: 16, color: kPrimaryTextColor),
+            ),
           ],
         ),
         confirmText: 'Add Task',
         cancelText: 'Cancel',
         onConfirm: () async {
           if (controller.text.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Please enter a title',
-                    style: TextStyle(color: Colors.white))));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Please enter a title',
+                      style: TextStyle(color: Colors.white))),
+            );
             return;
           }
           await _supabaseServices.addTask(controller.text, date);
@@ -155,26 +155,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
     VoidCallback? onConfirm,
   }) {
     return Dialog(
-      backgroundColor: Colors.white.withOpacity(0.05),
+      backgroundColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Padding(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(20),
+            border:
+                Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(title,
-                  style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 20,
-                      color: kPrimaryTextColor)),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
+                  color: kPrimaryTextColor,
+                ),
+              ),
               const SizedBox(height: 10),
               contentWidget ??
-                  Text(content ?? '',
-                      style: GoogleFonts.poppins(
-                          fontSize: 16, color: kPrimaryTextColor),
-                      textAlign: TextAlign.center),
+                  Text(
+                    content ?? '',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: kPrimaryTextColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -182,22 +202,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   if (cancelText != null)
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
-                      child: Text(cancelText,
-                          style: TextStyle(color: Colors.white)),
+                      child: Text(
+                        cancelText,
+                        style: GoogleFonts.poppins(color: Colors.white),
+                      ),
                     ),
                   if (confirmText != null)
                     ElevatedButton(
                       onPressed: () {
                         onConfirm?.call();
                       },
-                      child: Text(confirmText),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: kActiveCheckboxColor,
                         foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        confirmText,
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
                       ),
                     ),
                 ],
-              )
+              ),
             ],
           ),
         ),
@@ -281,7 +312,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: GoogleFonts.poppins(color: kPrimaryTextColor)),
         centerTitle: true,
         backgroundColor: Colors.yellow.withOpacity(0.2),
-
         elevation: 0,
       ),
       bottomNavigationBar: ClipRRect(
